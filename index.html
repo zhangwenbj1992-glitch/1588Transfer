@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server 1588 Transfer Portal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<style>
+/* Layout: two views in one page. The application form is a narrow column under the server number; the leadership dashboard (#dashboard) is a wide board of counts, breakdowns and the applicant table. */
+:root {
+  --bg: #eceff6;
+  --surface: #ffffff;
+  --ink: #141a2e;
+  --muted: #566080;
+  --line: #cbd3e3;
+  --accent: #2a3fd0;
+  --on-accent: #ffffff;
+  --danger: #b3261e;
+  --ok: #1d7a4a;
+  --track: #dde2ee;
+  --display: "Saira Condensed", "Arial Narrow", "Noto Sans", sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", "Noto Sans", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1330; --surface: #171e44; --ink: #eef0fb; --muted: #a2abd1; --line: #323c74;
+    --accent: #f0b429; --on-accent: #1a1503; --danger: #ff8f85; --ok: #6fd8a0; --track: #252e60;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1330; --surface: #171e44; --ink: #eef0fb; --muted: #a2abd1; --line: #323c74;
+  --accent: #f0b429; --on-accent: #1a1503; --danger: #ff8f85; --ok: #6fd8a0; --track: #252e60;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-inline: 20px; padding-block: 32px 64px;
+}
+.switch { max-width: 620px; margin: 28px auto 0; font-size: 14px; }
+#viewDash .switch { max-width: 1120px; }
+.switch a { color: var(--muted); }
+#viewForm {
+  .wrap { max-width: 620px; margin-inline: auto; display: flex; flex-direction: column; gap: 28px; }
+
+  .mast { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .mast-id { display: flex; flex-direction: column; min-width: 0; }
+  .eyebrow { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .num { font-family: var(--display); font-weight: 800; font-size: clamp(72px, 22vw, 124px); line-height: .82; letter-spacing: -.01em; color: var(--accent); font-variant-numeric: tabular-nums; }
+  h1 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; margin: 14px 0 0; text-wrap: balance; }
+  .tag { margin: 6px 0 0; color: var(--muted); }
+  .lang { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+
+  .note { border: 1px dashed var(--line); border-radius: 6px; padding: 10px 14px; font-size: 14px; color: var(--muted); }
+
+  form { display: flex; flex-direction: column; gap: 28px; }
+  fieldset.group { border: 0; border-top: 2px solid var(--ink); margin: 0; padding: 18px 0 0; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  fieldset.group > legend { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .18em; text-transform: uppercase; padding: 0 10px 0 0; float: left; width: 100%; margin-bottom: 2px; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .field > label, .field > .lbl { font-weight: 600; }
+  .req { color: var(--danger); margin-left: 2px; }
+  .help { margin: 0; font-size: 14px; color: var(--muted); }
+  .callout { margin: 0 0 8px; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 6px; font-weight: 500; }
+  .err { margin: 0; font-size: 14px; color: var(--danger); font-weight: 500; }
+
+  input[type="text"], select, textarea {
+    width: 100%; font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 6px; padding: 11px 12px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  .field.bad input, .field.bad select, .field.bad textarea, .field.bad .chips { border-color: var(--danger); }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border: 1px solid transparent; border-radius: 8px; }
+  .chip { position: relative; }
+  .chip input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .chip span { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-weight: 500; }
+  .chip i { flex: none; width: 16px; height: 16px; border-radius: 3px; background: var(--sw); border: 1px solid var(--muted); }
+  .chip input:checked + span { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .chip input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .power { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .unit { position: relative; }
+  .unit input { padding-right: 34px; font-variant-numeric: tabular-nums; }
+  .unit b { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 600; pointer-events: none; }
+
+  button {
+    font: inherit; font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .08em; text-transform: uppercase;
+    background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 14px 24px; cursor: pointer;
+  }
+  button[disabled] { opacity: .6; cursor: progress; }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .formmsg { margin: 0; color: var(--danger); font-weight: 500; }
+
+  .done { border-top: 2px solid var(--ok); padding-top: 20px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+  .done h2 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; margin: 0; color: var(--ok); }
+  .done p { margin: 0; }
+
+  @media (max-width: 520px) {
+    .chips { grid-template-columns: repeat(2, 1fr); }
+    .power { grid-template-columns: 1fr; }
+  }
+}
+#viewDash {
+  font-size: 15px; line-height: 1.45;
+  .wrap { max-width: 1120px; margin-inline: auto; display: flex; flex-direction: column; gap: 24px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .mast { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .eyebrow { font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(36px, 8vw, 54px); line-height: .95; margin: 2px 0 0; }
+  h1 b { color: var(--accent); font-weight: 800; }
+  .mast-side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+
+  button { font: inherit; font-weight: 600; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 9px 16px; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button[disabled] { opacity: .6; cursor: progress; }
+  input[type="text"], input[type="password"], select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px; min-width: 0; }
+
+  .note { border: 1px dashed var(--line); border-radius: 6px; padding: 10px 14px; color: var(--muted); margin: 0; }
+  .gate { max-width: 380px; display: flex; flex-direction: column; gap: 10px; }
+  .gate label { font-weight: 600; }
+  .gate .row { display: flex; gap: 8px; }
+  .gate .row input { flex: 1; }
+  .msg { margin: 0; color: var(--danger); font-weight: 500; }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tile .k { font-size: 13px; color: var(--muted); }
+  .tile .v { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 13px; color: var(--muted); }
+
+  .breaks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 32px; align-items: start; }
+  .bar .n small { font-size: inherit; font-weight: 400; color: var(--muted); }
+  .break { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .16em; text-transform: uppercase; margin: 0; padding-top: 10px; border-top: 2px solid var(--ink); }
+  .bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
+  .bar .lab { display: flex; align-items: center; gap: 7px; min-width: 0; overflow-wrap: anywhere; }
+  .bar .n { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bar .trk { grid-column: 1 / -1; height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+  .sw { flex: none; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--muted); }
+  .empty { color: var(--muted); margin: 0; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .tools input { flex: 1 1 220px; }
+  .count { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 1080px; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  th button { all: unset; cursor: pointer; font: inherit; letter-spacing: inherit; }
+  th button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.app { cursor: pointer; }
+  tr.app:hover td { background: var(--bg); }
+  tr.detail td { background: var(--bg); }
+  tr:last-child td { border-bottom: 0; }
+  .seat { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .decide { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .decide label { font-weight: 600; }
+  .pill { display: inline-block; padding: 1px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; white-space: nowrap; color: var(--muted); }
+  .pill.no { border-color: var(--danger); color: var(--danger); font-weight: 600; }
+  button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .pill.yes { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+  dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 0; max-width: 760px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  @media (max-width: 860px) { .tiles { grid-template-columns: repeat(2, 1fr); } .breaks { grid-template-columns: 1fr; } }
+  @media (max-width: 460px) {  .tile .v { font-size: 32px; } }
+}
+</style>
+</head>
+<body>
+
+<div id="viewForm">
+<div class="wrap">
+  <header class="mast">
+    <div class="mast-id">
+      <span class="eyebrow" data-i18n="eyebrow">Server</span>
+      <span class="num">1588</span>
+      <h1 data-i18n="title">Transfer Portal</h1>
+      <p class="tag" data-i18n="tag">Apply for a seat on Server 1588 next season.</p>
+    </div>
+    <label class="lang" for="lang"><span data-i18n="lang">Language</span>
+      <select id="lang">
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+        <option value="ko">한국어</option>
+        <option value="ja">日本語</option>
+        <option value="es">Español</option>
+        <option value="pt">Português</option>
+      </select>
+    </label>
+  </header>
+
+  <p class="note" id="previewNote" hidden>Preview mode: applications are not saved yet. Add your storage link to <code>ENDPOINT</code> in the page script to start collecting them.</p>
+
+  <form id="form" novalidate>
+    <fieldset class="group">
+      <legend data-i18n="g1">Player</legend>
+      <div class="field" data-f="name">
+        <label for="name"><span data-i18n="name">In-game name</span><span class="req">*</span></label>
+        <input type="text" id="name" autocomplete="off" maxlength="60">
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="accountId">
+        <label for="accountId"><span data-i18n="id">Account ID</span><span class="req">*</span></label>
+        <input type="text" id="accountId" inputmode="numeric" autocomplete="off" maxlength="24" placeholder="0000000000000000">
+        <p class="help" data-i18n="idHelp">The 16-digit number on your profile. Open your profile, tap the pencil next to your name, then tap the copy icon next to ID.</p>
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="server">
+        <label for="server"><span data-i18n="server">Current server</span><span class="req">*</span></label>
+        <input type="text" id="server" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="1432">
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="alliance">
+        <label for="alliance"><span data-i18n="alliance">Current alliance</span><span class="req">*</span></label>
+        <input type="text" id="alliance" autocomplete="off" maxlength="60">
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="seat">
+        <span class="lbl" id="seatLbl"><span data-i18n="seat">Seat color</span><span class="req">*</span></span>
+        <p class="help" data-i18n="seatHelp">Choose your post-Season 4 seat color if you already know it. If not, choose your seat color from the last transfer.</p>
+        <div class="chips" role="radiogroup" aria-labelledby="seatLbl">
+          <label class="chip"><input type="radio" name="seat" id="seatGold" value="Gold"><span style="--sw:#e3b23c"><i></i><em style="font-style:normal" data-i18n="gold">Gold</em></span></label>
+          <label class="chip"><input type="radio" name="seat" id="seatPurple" value="Purple"><span style="--sw:#8a4fd3"><i></i><em style="font-style:normal" data-i18n="purple">Purple</em></span></label>
+          <label class="chip"><input type="radio" name="seat" id="seatBlue" value="Blue"><span style="--sw:#3b82e6"><i></i><em style="font-style:normal" data-i18n="blue">Blue</em></span></label>
+          <label class="chip"><input type="radio" name="seat" id="seatWhite" value="White"><span style="--sw:#f4f5f8"><i></i><em style="font-style:normal" data-i18n="white">White</em></span></label>
+        </div>
+        <p class="err" hidden></p>
+      </div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend data-i18n="g2">Transfer plans</legend>
+      <div class="field" data-f="targetAlliance">
+        <label for="targetAlliance"><span data-i18n="target">Which alliance on Server 1588 do you want to join?</span><span class="req">*</span></label>
+        <select id="targetAlliance">
+          <option value="" data-i18n="select">Select</option>
+          <option value="Babe">Babe</option>
+          <option value="Romi">Romi</option>
+          <option value="PPRG">PPRG</option>
+          <option value="LFgg">LFgg</option>
+          <option value="Ring">Ring</option>
+          <option value="ValR">ValR</option>
+          <option value="Roit">Roit</option>
+          <option value="Other" data-i18n="other">Other</option>
+        </select>
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="otherAlliance">
+        <label for="otherAlliance"><span data-i18n="flex">If that alliance cannot take you, would you join another alliance?</span><span class="req">*</span></label>
+        <select id="otherAlliance">
+          <option value="" data-i18n="select">Select</option>
+          <option value="Yes" data-i18n="yes">Yes</option>
+          <option value="No" data-i18n="no">No</option>
+        </select>
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="friends">
+        <label for="friends"><span data-i18n="friends">Are you transferring with friends?</span><span class="req">*</span></label>
+        <select id="friends">
+          <option value="" data-i18n="select">Select</option>
+          <option value="Yes" data-i18n="yes">Yes</option>
+          <option value="No" data-i18n="no">No</option>
+          <option value="To be determined" data-i18n="tbd">Not decided yet</option>
+        </select>
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="friendDetails" id="friendDetailsField" hidden>
+        <p class="callout" data-i18n="each">Each player must submit their own application, including every friend in your group. This keeps our headcount accurate.</p>
+        <label for="friendDetails" data-i18n="who">Who are you transferring with?</label>
+        <textarea id="friendDetails" maxlength="1500"></textarea>
+        <p class="help" data-i18n="whoHelp">For each friend, give their name, server, alliance and seat color. Say who the main contact for the group is.</p>
+      </div>
+      <div class="field" data-f="withoutFriends" id="withoutFriendsField" hidden>
+        <label for="withoutFriends" data-i18n="alone">Would you transfer without your friends?</label>
+        <select id="withoutFriends">
+          <option value="" data-i18n="select">Select</option>
+          <option value="Yes" data-i18n="yes">Yes</option>
+          <option value="No" data-i18n="no">No</option>
+        </select>
+        <p class="help" data-i18n="aloneHelp">Seats are limited, so we cannot always fit a whole group.</p>
+      </div>
+      <div class="field" data-f="holding">
+        <label for="holding"><span data-i18n="hold">Are you holding your power back?</span><span class="req">*</span></label>
+        <select id="holding">
+          <option value="" data-i18n="select">Select</option>
+          <option value="Yes - significantly" data-i18n="holdMuch">Yes, a lot</option>
+          <option value="Yes - a little" data-i18n="holdLittle">Yes, a little</option>
+          <option value="No" data-i18n="no">No</option>
+        </select>
+        <p class="help" data-i18n="holdHelp">This means saving resources while keeping your power low so you qualify for a lower seat.</p>
+        <p class="err" hidden></p>
+      </div>
+      <div class="field" data-f="savedPlan" id="savedPlanField" hidden>
+        <label for="savedPlan" data-i18n="saved">What have you saved, and what is your plan until transfers?</label>
+        <textarea id="savedPlan" maxlength="1500"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend data-i18n="g3">Power</legend>
+      <p class="help" data-i18n="powHelp">In millions, for example 56.84</p>
+      <div class="power">
+        <div class="field" data-f="squad1">
+          <label for="squad1"><span data-i18n="sq1">Squad 1</span><span class="req">*</span></label>
+          <div class="unit"><input type="text" id="squad1" inputmode="decimal" autocomplete="off" maxlength="10" placeholder="56.84"><b>M</b></div>
+          <p class="err" hidden></p>
+        </div>
+        <div class="field" data-f="thp">
+          <label for="thp"><span data-i18n="thp">Total hero power (THP)</span><span class="req">*</span></label>
+          <div class="unit"><input type="text" id="thp" inputmode="decimal" autocomplete="off" maxlength="10" placeholder="185.40"><b>M</b></div>
+          <p class="err" hidden></p>
+        </div>
+      </div>
+    </fieldset>
+
+    <p class="formmsg" id="formMsg" role="alert" hidden></p>
+    <div><button type="submit" id="submitBtn" data-i18n="submit">Submit application</button></div>
+  </form>
+
+  <section class="done" id="done" hidden aria-live="polite">
+    <h2 data-i18n="okTitle">Application received</h2>
+    <p data-i18n="okBody">Server 1588 leadership will review it and contact you in game.</p>
+    <button type="button" class="ghost" id="again" data-i18n="again">Submit another application</button>
+  </section>
+</div>
+<p class="switch"><a href="#dashboard">Leadership dashboard</a></p>
+</div>
+
+<div id="viewDash" hidden>
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <span class="eyebrow">Transfer applications</span>
+      <h1>Server <b>1588</b></h1>
+    </div>
+    <div class="mast-side">
+      <span id="updated"></span>
+      <button type="button" class="ghost" id="refresh" hidden>Refresh</button>
+      <button type="button" class="ghost" id="lock" hidden>Lock</button>
+    </div>
+  </header>
+
+  <p class="note" id="demoNote" hidden>Example data. These eight applicants are made up so you can see the layout. Add your storage link to <code>ENDPOINT</code> in the page script to load real applications.</p>
+
+  <form class="gate" id="gate" hidden>
+    <label for="pw">Dashboard password</label>
+    <div class="row">
+      <input type="password" id="pw" autocomplete="current-password">
+      <button type="submit" id="unlock">Open</button>
+    </div>
+    <p class="msg" id="gateMsg" role="alert" hidden></p>
+  </form>
+
+  <main id="dash" hidden style="display:flex;flex-direction:column;gap:24px">
+    <section class="tiles" id="tiles"></section>
+    <section class="breaks" id="breaks"></section>
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <h2>Applicants</h2>
+      <div class="tools">
+        <input type="text" id="q" placeholder="Search name, alliance, server or account ID" aria-label="Search applicants">
+        <select id="seatFilter" aria-label="Filter by seat color">
+          <option value="">All seats</option><option>Gold</option><option>Purple</option><option>Blue</option><option>White</option>
+        </select>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Rejected</option>
+        </select>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr id="head"></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <p class="empty">Select a row to accept or reject the application and to see the account ID, friend group and savings plan.</p>
+    </section>
+  </main>
+</div>
+<p class="switch"><a href="#apply">Back to the application form</a></p>
+</div>
+
+<script>
+// Paste your Google Apps Script web app URL here. It is used by both the form and the dashboard.
+// While it is empty the form saves nothing and the dashboard shows example data.
+const ENDPOINT = "";
+
+// Which view is showing: the form by default, the dashboard at #dashboard.
+function route() {
+  const dash = location.hash === "#dashboard";
+  document.getElementById("viewForm").hidden = dash;
+  document.getElementById("viewDash").hidden = !dash;
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", route);
+route();
+
+// ---------- Application form ----------
+(function () {
+
+const I18N = {
+  en: { eyebrow:"Server", title:"Transfer Portal", tag:"Apply for a seat on Server 1588 next season.", lang:"Language",
+    g1:"Player", g2:"Transfer plans", target:"Which alliance on Server 1588 do you want to join?", flex:"If that alliance cannot take you, would you join another alliance?", g3:"Power", thp:"Total hero power (THP)", name:"In-game name", id:"Account ID",
+    idHelp:"The 16-digit number on your profile. Open your profile, tap the pencil next to your name, then tap the copy icon next to ID.",
+    server:"Current server", alliance:"Current alliance", seat:"Seat color", seatHelp:"Choose your post-Season 4 seat color if you already know it. If not, choose your seat color from the last transfer.",
+    gold:"Gold", purple:"Purple", blue:"Blue", white:"White",
+    friends:"Are you transferring with friends?", select:"Select", yes:"Yes", no:"No", other:"Other", tbd:"Not decided yet",
+    each:"Each player must submit their own application, including every friend in your group. This keeps our headcount accurate.", who:"Who are you transferring with?", whoHelp:"For each friend, give their name, server, alliance and seat color. Say who the main contact for the group is.",
+    alone:"Would you transfer without your friends?", aloneHelp:"Seats are limited, so we cannot always fit a whole group.",
+    hold:"Are you holding your power back?", holdHelp:"This means saving resources while keeping your power low so you qualify for a lower seat.",
+    holdMuch:"Yes, a lot", holdLittle:"Yes, a little", saved:"What have you saved, and what is your plan until transfers?",
+    powHelp:"In millions, for example 56.84", sq1:"Squad 1",
+    submit:"Submit application", sending:"Submitting…", okTitle:"Application received",
+    okBody:"Server 1588 leadership will review it and contact you in game.", again:"Submit another application",
+    eReq:"This field is required.", eId:"Enter exactly 16 digits.", eSrv:"Enter your server number.", ePow:"Enter a number such as 56.84.",
+    eFix:"Fix the highlighted fields, then submit again.", eFail:"Your application was not sent. Check your connection and submit again." },
+  zh: { eyebrow:"服务器", title:"转服申请", tag:"申请下赛季转入 1588 服务器的席位。", lang:"语言",
+    g1:"玩家信息", g2:"转服计划", target:"你想加入 1588 服务器的哪个联盟？", flex:"如果该联盟无法接收你，你愿意加入其他联盟吗？", g3:"战力", thp:"英雄总战力 (THP)", name:"游戏昵称", id:"账号 ID",
+    idHelp:"个人资料中的 16 位数字。打开个人资料，点击昵称旁的铅笔图标，再点击 ID 旁的复制图标。",
+    server:"当前服务器", alliance:"当前联盟", seat:"席位颜色", seatHelp:"如果你已经知道第 4 赛季后的席位颜色，请选择它；否则请选择上次转服时的席位颜色。",
+    gold:"金色", purple:"紫色", blue:"蓝色", white:"白色",
+    friends:"你打算和朋友一起转服吗？", select:"请选择", yes:"是", no:"否", other:"其他", tbd:"尚未决定",
+    each:"每位玩家都必须单独提交申请，包括你小组里的每位朋友，以便我们准确统计人数。", who:"你打算和谁一起转服？", whoHelp:"请填写每位朋友的昵称、服务器、联盟和席位颜色，并注明小组的主要联系人。",
+    alone:"如果朋友无法同行，你愿意单独转服吗？", aloneHelp:"席位有限，我们不一定能安排整个小组。",
+    hold:"你在压战力吗？", holdHelp:"指囤积资源但保持低战力，以便获得更低档的席位。",
+    holdMuch:"是，压了很多", holdLittle:"是，压了一点", saved:"你目前囤了什么？转服前有什么计划？",
+    powHelp:"单位为百万，例如 56.84", sq1:"第一小队",
+    submit:"提交申请", sending:"提交中…", okTitle:"申请已收到",
+    okBody:"1588 服务器管理层会审核申请，并在游戏内联系你。", again:"再提交一份申请",
+    eReq:"此项为必填。", eId:"请输入 16 位数字。", eSrv:"请输入服务器编号。", ePow:"请输入数字，例如 56.84。",
+    eFix:"请修改标红的项目后重新提交。", eFail:"申请未发送。请检查网络后重新提交。" },
+  ko: { eyebrow:"서버", title:"이전 신청", tag:"다음 시즌 1588 서버 좌석을 신청하세요.", lang:"언어",
+    g1:"플레이어", g2:"이전 계획", target:"1588 서버에서 어느 연맹에 가입하고 싶나요?", flex:"그 연맹이 받아 주지 못하면 다른 연맹에 가입하시겠어요?", g3:"전투력", thp:"총 영웅 전투력 (THP)", name:"게임 닉네임", id:"계정 ID",
+    idHelp:"프로필에 있는 16자리 숫자입니다. 프로필을 열고 이름 옆 연필 아이콘을 누른 뒤 ID 옆 복사 아이콘을 누르세요.",
+    server:"현재 서버", alliance:"현재 연맹", seat:"좌석 색상", seatHelp:"시즌 4 이후 좌석 색상을 이미 알고 있다면 그 색상을, 아직 모른다면 지난 이전 때의 좌석 색상을 선택하세요.",
+    gold:"골드", purple:"퍼플", blue:"블루", white:"화이트",
+    friends:"친구와 함께 이전하나요?", select:"선택", yes:"예", no:"아니요", other:"기타", tbd:"미정",
+    each:"그룹의 친구를 포함해 모든 플레이어가 각자 신청서를 제출해야 합니다. 정확한 인원 파악을 위해서입니다.", who:"누구와 함께 이전하나요?", whoHelp:"친구마다 닉네임, 서버, 연맹, 좌석 색상을 적고 그룹의 대표 연락자를 알려 주세요.",
+    alone:"친구 없이도 이전하시겠어요?", aloneHelp:"좌석이 한정되어 있어 그룹 전체를 받지 못할 수 있습니다.",
+    hold:"전투력을 억제하고 있나요?", holdHelp:"더 낮은 좌석을 받기 위해 자원을 모으면서 전투력을 낮게 유지하는 것을 말합니다.",
+    holdMuch:"예, 많이", holdLittle:"예, 조금", saved:"지금까지 무엇을 모았고, 이전까지 어떤 계획인가요?",
+    powHelp:"백만 단위, 예: 56.84", sq1:"1분대",
+    submit:"신청서 제출", sending:"제출 중…", okTitle:"신청서가 접수되었습니다",
+    okBody:"1588 서버 운영진이 검토한 뒤 게임 내에서 연락드립니다.", again:"다른 신청서 제출",
+    eReq:"필수 항목입니다.", eId:"숫자 16자리를 입력하세요.", eSrv:"서버 번호를 입력하세요.", ePow:"56.84와 같은 숫자를 입력하세요.",
+    eFix:"표시된 항목을 수정한 뒤 다시 제출하세요.", eFail:"신청서가 전송되지 않았습니다. 연결을 확인한 뒤 다시 제출하세요." },
+  ja: { eyebrow:"サーバー", title:"移転申請", tag:"来シーズンのサーバー1588の席を申請してください。", lang:"言語",
+    g1:"プレイヤー", g2:"移転の計画", target:"サーバー1588でどの同盟に入りたいですか？", flex:"その同盟に入れない場合、他の同盟に入りますか？", g3:"戦力", thp:"英雄総戦力 (THP)", name:"ゲーム内の名前", id:"アカウントID",
+    idHelp:"プロフィールにある16桁の数字です。プロフィールを開き、名前の横の鉛筆アイコンを押してから、IDの横のコピーアイコンを押してください。",
+    server:"現在のサーバー", alliance:"現在の同盟", seat:"シートの色", seatHelp:"シーズン4後のシートの色がすでに分かっている場合はその色を、まだ分からない場合は前回の移転でのシートの色を選んでください。",
+    gold:"ゴールド", purple:"パープル", blue:"ブルー", white:"ホワイト",
+    friends:"友達と一緒に移転しますか？", select:"選択", yes:"はい", no:"いいえ", other:"その他", tbd:"未定",
+    each:"グループの友達を含め、プレイヤーは一人ずつ自分で申請してください。正確な人数を把握するためです。", who:"誰と一緒に移転しますか？", whoHelp:"友達ごとに名前、サーバー、同盟、シートの色を記入し、グループの代表連絡者を教えてください。",
+    alone:"友達がいなくても移転しますか？", aloneHelp:"席数に限りがあるため、グループ全員を受け入れられない場合があります。",
+    hold:"戦力を抑えていますか？", holdHelp:"下位のシートに入るため、資源を貯めながら戦力を低く保つことを指します。",
+    holdMuch:"はい、大幅に", holdLittle:"はい、少し", saved:"これまでに何を貯めましたか？移転までの計画は？",
+    powHelp:"百万単位、例：56.84", sq1:"第1部隊",
+    submit:"申請を送信", sending:"送信中…", okTitle:"申請を受け付けました",
+    okBody:"サーバー1588の運営が確認し、ゲーム内で連絡します。", again:"別の申請を送信",
+    eReq:"必須項目です。", eId:"16桁の数字を入力してください。", eSrv:"サーバー番号を入力してください。", ePow:"56.84 のような数字を入力してください。",
+    eFix:"表示された項目を修正して、もう一度送信してください。", eFail:"申請は送信されませんでした。接続を確認して、もう一度送信してください。" },
+  es: { eyebrow:"Servidor", title:"Portal de traslados", tag:"Solicita un asiento en el servidor 1588 para la próxima temporada.", lang:"Idioma",
+    g1:"Jugador", g2:"Plan de traslado", target:"¿A qué alianza del servidor 1588 quieres unirte?", flex:"Si esa alianza no puede aceptarte, ¿te unirías a otra?", g3:"Poder", thp:"Poder total de héroes (THP)", name:"Nombre en el juego", id:"ID de cuenta",
+    idHelp:"El número de 16 dígitos de tu perfil. Abre tu perfil, toca el lápiz junto a tu nombre y luego el icono de copiar junto al ID.",
+    server:"Servidor actual", alliance:"Alianza actual", seat:"Color de asiento", seatHelp:"Elige tu color de asiento posterior a la temporada 4 si ya lo conoces. Si no, elige el del último traslado.",
+    gold:"Oro", purple:"Morado", blue:"Azul", white:"Blanco",
+    friends:"¿Te trasladas con amigos?", select:"Selecciona", yes:"Sí", no:"No", other:"Otra", tbd:"Aún no lo sé",
+    each:"Cada jugador debe enviar su propia solicitud, incluidos todos los amigos de tu grupo. Así el recuento es exacto.", who:"¿Con quién te trasladas?", whoHelp:"Indica el nombre, servidor, alianza y color de asiento de cada amigo. Di quién es el contacto principal del grupo.",
+    alone:"¿Te trasladarías sin tus amigos?", aloneHelp:"Los asientos son limitados y no siempre podemos acomodar a un grupo completo.",
+    hold:"¿Estás conteniendo tu poder?", holdHelp:"Significa guardar recursos y mantener el poder bajo para optar a un asiento inferior.",
+    holdMuch:"Sí, mucho", holdLittle:"Sí, un poco", saved:"¿Qué has guardado y cuál es tu plan hasta los traslados?",
+    powHelp:"En millones, por ejemplo 56.84", sq1:"Escuadrón 1",
+    submit:"Enviar solicitud", sending:"Enviando…", okTitle:"Solicitud recibida",
+    okBody:"Los líderes del servidor 1588 la revisarán y te contactarán en el juego.", again:"Enviar otra solicitud",
+    eReq:"Este campo es obligatorio.", eId:"Introduce exactamente 16 dígitos.", eSrv:"Introduce el número de tu servidor.", ePow:"Introduce un número como 56.84.",
+    eFix:"Corrige los campos marcados y vuelve a enviar.", eFail:"Tu solicitud no se envió. Revisa tu conexión y vuelve a enviarla." },
+  pt: { eyebrow:"Servidor", title:"Portal de transferências", tag:"Candidate-se a um assento no servidor 1588 para a próxima temporada.", lang:"Idioma",
+    g1:"Jogador", g2:"Plano de transferência", target:"Em qual aliança do servidor 1588 você quer entrar?", flex:"Se essa aliança não puder aceitar você, entraria em outra?", g3:"Poder", thp:"Poder total de heróis (THP)", name:"Nome no jogo", id:"ID da conta",
+    idHelp:"O número de 16 dígitos do seu perfil. Abra o perfil, toque no lápis ao lado do nome e depois no ícone de copiar ao lado do ID.",
+    server:"Servidor atual", alliance:"Aliança atual", seat:"Cor do assento", seatHelp:"Escolha sua cor de assento pós-temporada 4 se já souber. Caso contrário, escolha a da última transferência.",
+    gold:"Ouro", purple:"Roxo", blue:"Azul", white:"Branco",
+    friends:"Vai se transferir com amigos?", select:"Selecione", yes:"Sim", no:"Não", other:"Outra", tbd:"Ainda não sei",
+    each:"Cada jogador deve enviar sua própria candidatura, incluindo todos os amigos do seu grupo. Assim a contagem fica exata.", who:"Com quem vai se transferir?", whoHelp:"Informe o nome, servidor, aliança e cor do assento de cada amigo. Diga quem é o contato principal do grupo.",
+    alone:"Você se transferiria sem seus amigos?", aloneHelp:"Os assentos são limitados e nem sempre conseguimos acomodar um grupo inteiro.",
+    hold:"Você está segurando seu poder?", holdHelp:"Significa guardar recursos e manter o poder baixo para se qualificar a um assento inferior.",
+    holdMuch:"Sim, bastante", holdLittle:"Sim, um pouco", saved:"O que você guardou e qual é o plano até as transferências?",
+    powHelp:"Em milhões, por exemplo 56.84", sq1:"Esquadrão 1",
+    submit:"Enviar candidatura", sending:"Enviando…", okTitle:"Candidatura recebida",
+    okBody:"A liderança do servidor 1588 vai analisar e entrar em contato no jogo.", again:"Enviar outra candidatura",
+    eReq:"Este campo é obrigatório.", eId:"Digite exatamente 16 dígitos.", eSrv:"Digite o número do seu servidor.", ePow:"Digite um número como 56.84.",
+    eFix:"Corrija os campos destacados e envie novamente.", eFail:"Sua candidatura não foi enviada. Verifique a conexão e envie novamente." }
+};
+
+const $ = id => document.getElementById(id);
+let lang = "en";
+let errs = {};
+
+function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  renderErrors();
+}
+
+function renderErrors() {
+  document.querySelectorAll(".field").forEach(f => {
+    const key = errs[f.dataset.f], p = f.querySelector(".err");
+    f.classList.toggle("bad", !!key);
+    if (p) { p.hidden = !key; p.textContent = key ? t(key) : ""; }
+  });
+}
+
+function syncConditional() {
+  const fr = $("friends").value;
+  const group = fr === "Yes" || fr === "To be determined";
+  $("friendDetailsField").hidden = !group;
+  $("withoutFriendsField").hidden = !group;
+  $("savedPlanField").hidden = !$("holding").value.startsWith("Yes");
+}
+
+function parsePower(v) {
+  const n = Number(String(v).trim().replace(/m$/i, "").replace(/,/g, "").trim());
+  return Number.isFinite(n) && n > 0 && n < 100000 ? n : null;
+}
+
+function collect() {
+  const seat = document.querySelector('input[name="seat"]:checked');
+  const group = !$("friendDetailsField").hidden;
+  return {
+    timestamp: new Date().toISOString(), language: lang,
+    name: $("name").value.trim(),
+    accountId: $("accountId").value.replace(/\s+/g, ""),
+    server: $("server").value.trim().replace(/^#/, ""),
+    alliance: $("alliance").value.trim(),
+    targetAlliance: $("targetAlliance").value.trim(),
+    otherAlliance: $("otherAlliance").value,
+    seat: seat ? seat.value : "",
+    friends: $("friends").value,
+    friendDetails: group ? $("friendDetails").value.trim() : "",
+    withoutFriends: group ? $("withoutFriends").value : "",
+    holding: $("holding").value,
+    savedPlan: $("savedPlanField").hidden ? "" : $("savedPlan").value.trim(),
+    squad1: $("squad1").value, thp: $("thp").value
+  };
+}
+
+function validate(d) {
+  const e = {};
+  ["name", "alliance", "seat", "targetAlliance", "otherAlliance", "friends", "holding"].forEach(k => { if (!d[k]) e[k] = "eReq"; });
+  if (!d.accountId) e.accountId = "eReq"; else if (!/^\d{16}$/.test(d.accountId)) e.accountId = "eId";
+  if (!d.server) e.server = "eReq"; else if (!/^\d{1,5}$/.test(d.server)) e.server = "eSrv";
+  ["squad1", "thp"].forEach(k => {
+    if (!String(d[k]).trim()) e[k] = "eReq";
+    else { const n = parsePower(d[k]); if (n === null) e[k] = "ePow"; else d[k] = n; }
+  });
+  return e;
+}
+
+function showMsg(key) { const m = $("formMsg"); m.hidden = !key; m.textContent = key ? t(key) : ""; m.dataset.key = key || ""; }
+
+$("form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const d = collect();
+  errs = validate(d);
+  renderErrors();
+  if (Object.keys(errs).length) {
+    showMsg("eFix");
+    const first = document.querySelector(".field.bad input, .field.bad select, .field.bad textarea");
+    if (first) first.focus();
+    return;
+  }
+  showMsg("");
+  const btn = $("submitBtn");
+  btn.disabled = true; btn.textContent = t("sending");
+  try {
+    if (ENDPOINT) {
+      // Sent as plain text so Google Apps Script accepts it without a preflight request.
+      const r = await fetch(ENDPOINT, { method: "POST", body: JSON.stringify(d) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+    }
+    $("form").hidden = true; $("done").hidden = false;
+    $("done").scrollIntoView({ block: "start" });
+  } catch (err) {
+    showMsg("eFail");
+  } finally {
+    btn.disabled = false; btn.textContent = t("submit");
+  }
+});
+
+$("again").addEventListener("click", () => {
+  $("form").reset(); errs = {}; renderErrors(); syncConditional(); showMsg("");
+  $("done").hidden = true; $("form").hidden = false; $("name").focus();
+});
+
+$("form").addEventListener("input", ev => {
+  const f = ev.target.closest(".field");
+  if (f && errs[f.dataset.f]) { delete errs[f.dataset.f]; renderErrors(); }
+  syncConditional();
+});
+
+$("lang").addEventListener("change", ev => {
+  lang = ev.target.value;
+  try { localStorage.setItem("s1588-lang", lang); } catch (e) {}
+  applyLang();
+  const m = $("formMsg"); if (m.dataset.key) m.textContent = t(m.dataset.key);
+});
+
+(function init() {
+  let saved = null;
+  try { saved = localStorage.getItem("s1588-lang"); } catch (e) {}
+  const nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+  lang = I18N[saved] ? saved : (I18N[nav] ? nav : "en");
+  $("lang").value = lang;
+  $("previewNote").hidden = !!ENDPOINT;
+  applyLang(); syncConditional();
+})();
+})();
+
+// ---------- Leadership dashboard ----------
+(function () {
+
+const SEAT_SW = { Gold: "#e3b23c", Purple: "#8a4fd3", Blue: "#3b82e6", White: "#f4f5f8" };
+const ALLIANCES = ["Babe", "Romi", "PPRG", "LFgg", "Ring", "ValR", "Roit"];
+const COLS = [
+  { k: "name", t: "Name" }, { k: "status", t: "Status" }, { k: "server", t: "Server", num: 1 }, { k: "alliance", t: "From alliance" },
+  { k: "targetAlliance", t: "Wants to join" }, { k: "otherAlliance", t: "Open to other" },
+  { k: "seat", t: "Seat" }, { k: "friends", t: "Friends" }, { k: "holding", t: "Holding power" },
+  { k: "squad1", t: "Squad 1", num: 1 }, { k: "thp", t: "THP", num: 1 }, { k: "timestamp", t: "Submitted" }
+];
+const EXAMPLES = [
+  ["2026-10-01T14:20:00Z","en","IronVale","4821907736514402","1432","NOVA","Gold","Yes","Kestrel9 (1432, NOVA, Purple). I am the main contact.","No","No","",61.2,204.1,"Babe","Yes"],
+  ["2026-10-01T18:05:00Z","ko","달빛늑대","7719034482216650","1601","K1NG","Purple","No","","","Yes - a little","Holding about 300 shards until transfers.",52.4,173.0,"Babe","No"],
+  ["2026-10-02T02:41:00Z","es","Marisol_VX","3302918847561209","1432","NOVA","Blue","To be determined","Maybe TioPaco from 1432.","Yes","No","",41.75,135.4,"Romi","Yes"],
+  ["2026-10-02T09:12:00Z","zh","青山不改","9045517723380164","1577","HAN","Purple","Yes","长风 (1577, HAN, Blue)，我是联系人。","Yes","Yes - significantly","囤了经验和技能徽章，转服后再升级。",49.6,167.2,"PPRG","Yes"],
+  ["2026-10-03T11:30:00Z","en","Kestrel9","5567102984430917","1432","NOVA","Purple","Yes","IronVale is the main contact.","No","No","",55.1,182.5,"Babe","Yes"],
+  ["2026-10-03T20:54:00Z","pt","Bento_SP","6128845590173326","1620","BRZ","White","No","","","No","",28.3,86.9,"Romi","Yes"],
+  ["2026-10-04T06:18:00Z","ja","桜花の盾","2290476618835571","1601","SKR","Blue","No","","","Yes - a little","経験値を少し貯めています。",43.9,141.9,"PPRG","No"],
+  ["2026-10-04T16:47:00Z","en","Dunmore","8834201957746603","1577","HAN","Gold","To be determined","","Yes","No","",63.8,214.7,"Babe","Yes"]
+];
+const KEYS = ["timestamp","language","name","accountId","server","alliance","seat","friends","friendDetails","withoutFriends","holding","savedPlan","squad1","thp","targetAlliance","otherAlliance","status","acceptedAlliance","decidedAt"];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const f2 = n => n.toFixed(2);
+let apps = [], sortKey = "timestamp", sortDir = -1, openId = null, decisionMsg = "";
+
+function normalize(rows) {
+  return rows.filter(r => r && (r.name || r.accountId)).map((r, i) => {
+    const a = Object.assign({}, r, { _id: i });
+    a.accountId = String(a.accountId || "").replace(/^'/, "");
+    a.server = String(a.server == null ? "" : a.server);
+    ["squad1", "thp"].forEach(k => a[k] = num(a[k]));
+    a.status = ["Accepted", "Rejected"].includes(a.status) ? a.status : "Pending";
+    a.acceptedAlliance = String(a.acceptedAlliance || "");
+    a.targetKey = String(a.targetAlliance || "").trim();
+    return a;
+  });
+}
+
+function renderSummary() {
+  const n = apps.length;
+  const avg = n ? apps.reduce((s, a) => s + a.thp, 0) / n : 0;
+  const avg1 = n ? apps.reduce((s, a) => s + a.squad1, 0) / n : 0;
+  const grouped = apps.filter(a => a.friends === "Yes").length;
+  const flexible = apps.filter(a => a.otherAlliance === "Yes").length;
+  const acc = apps.filter(a => a.status === "Accepted").length, rej = apps.filter(a => a.status === "Rejected").length;
+  $("tiles").innerHTML = [
+    ["Applications", n, acc + " accepted, " + rej + " rejected, " + (n - acc - rej) + " pending"],
+    ["Average THP", f2(avg) + "M", "Squad 1 average " + f2(avg1) + "M"],
+    ["Transferring with friends", grouped, "confirmed groups only"],
+    ["Open to another alliance", flexible, "if their first choice is full"]
+  ].map(t => `<div class="tile"><span class="k">${t[0]}</span><span class="v">${esc(t[1])}</span><span class="s">${esc(t[2])}</span></div>`).join("");
+
+  const SEATS = ["Gold", "Purple", "Blue", "White"];
+  const bar = (lab, sw, val, of, max, tip) => `<div class="bar" title="${esc(tip)}">
+      <span class="lab">${sw ? `<i class="sw" style="background:${sw}"></i>` : ""}${esc(lab)}</span>
+      <span class="n">${val}${of == null ? "" : ` <small>of ${of}</small>`}</span>
+      <span class="trk"><span class="fill" style="width:${max ? (val / max) * 100 : 0}%;display:block"></span></span>
+    </div>`;
+  const group = (title, body) => `<div class="break"><h2>${title}</h2>${body || `<p class="empty">No applications yet.</p>`}</div>`;
+  const bySeat = SEATS.map(s => apps.filter(a => a.seat === s));
+  const maxSeat = Math.max(1, ...bySeat.map(l => l.length));
+  const want = new Map([...ALLIANCES, "Other"].map(k => [k, 0]));
+  apps.forEach(a => { const k = a.targetKey || "Not answered"; want.set(k, (want.get(k) || 0) + 1); });
+  const wants = [...want].sort((a, b) => b[1] - a[1]);
+  $("breaks").innerHTML =
+    group("Applications by seat color", n ? SEATS.map((s, i) =>
+      bar(s, SEAT_SW[s], bySeat[i].length, null, maxSeat, `${s}: ${bySeat[i].length} of ${n} applications`)).join("") : "") +
+    group("Accepted by seat color", n ? SEATS.map((s, i) => {
+      const ok = bySeat[i].filter(a => a.status === "Accepted").length;
+      return bar(s, SEAT_SW[s], ok, bySeat[i].length, bySeat[i].length, `${s}: ${ok} accepted of ${bySeat[i].length} applied`);
+    }).join("") : "") +
+    group("Alliance they want to join", !n ? "" : wants.map(([k, c]) =>
+      bar(k, "", c, null, wants[0][1], `${k}: ${c} of ${n} applications`)).join(""));
+}
+
+function fmtDate(v) { const d = new Date(v); return isNaN(d) ? String(v || "") : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
+
+function decision(a) {
+  const msg = decisionMsg ? `<p class="msg" role="alert" style="margin-bottom:12px">${esc(decisionMsg)}</p>` : "";
+  const when = a.decidedAt ? " on " + esc(fmtDate(a.decidedAt)) : "";
+  if (a.status === "Accepted") return `<div class="decide"><span>Accepted into <strong>${esc(a.acceptedAlliance)}</strong>${when}</span>
+    <button type="button" class="ghost" data-act="undo" data-id="${a._id}">Undo acceptance</button></div>${msg}`;
+  if (a.status === "Rejected") return `<div class="decide"><span><strong>Rejected</strong>${when}</span>
+    <button type="button" class="ghost" data-act="undo" data-id="${a._id}">Undo rejection</button></div>${msg}`;
+  return `<div class="decide"><label for="acceptInto">Accept into alliance</label>
+    <select id="acceptInto"><option value="">Select</option>${ALLIANCES.map(x => `<option${x === a.targetAlliance ? " selected" : ""}>${x}</option>`).join("")}</select>
+    <button type="button" data-act="accept" data-id="${a._id}">Accept application</button>
+    <button type="button" class="danger" data-act="reject" data-id="${a._id}">Reject application</button></div>${msg}`;
+}
+
+function renderTable() {
+  $("head").innerHTML = COLS.map(c =>
+    `<th class="${c.num ? "num" : ""}" aria-sort="${sortKey === c.k ? (sortDir > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-k="${c.k}">${c.t}${sortKey === c.k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</button></th>`).join("");
+  const q = $("q").value.trim().toLowerCase(), sf = $("seatFilter").value, st = $("statusFilter").value;
+  const list = apps.filter(a => (!sf || a.seat === sf) && (!st || a.status === st) &&
+    (!q || [a.name, a.alliance, a.targetAlliance, a.server, a.accountId].some(v => String(v).toLowerCase().includes(q))));
+  const col = COLS.find(c => c.k === sortKey);
+  list.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    const r = col.num ? num(x) - num(y) : sortKey === "timestamp" ? new Date(x) - new Date(y) : String(x).localeCompare(String(y));
+    return r * sortDir;
+  });
+  $("count").textContent = list.length === apps.length ? apps.length + " applicants" : list.length + " of " + apps.length + " applicants";
+  $("rows").innerHTML = list.length ? list.map(a => {
+    const main = `<tr class="app" data-id="${a._id}" tabindex="0" aria-expanded="${openId === a._id}">
+      <td><strong>${esc(a.name)}</strong></td><td><span class="pill${a.status === "Accepted" ? " yes" : a.status === "Rejected" ? " no" : ""}">${a.status === "Accepted" ? "Accepted" + (a.acceptedAlliance ? " · " + esc(a.acceptedAlliance) : "") : a.status}</span></td><td class="num">${esc(a.server)}</td><td>${esc(a.alliance)}</td><td>${esc(a.targetAlliance)}</td><td>${esc(a.otherAlliance)}</td>
+      <td><span class="seat">${SEAT_SW[a.seat] ? `<i class="sw" style="background:${SEAT_SW[a.seat]}"></i>` : ""}${esc(a.seat)}</span></td>
+      <td>${esc(a.friends)}</td><td>${esc(a.holding)}</td>
+      <td class="num">${f2(a.squad1)}</td><td class="num"><strong>${f2(a.thp)}</strong></td><td>${esc(fmtDate(a.timestamp))}</td></tr>`;
+    const det = openId === a._id ? `<tr class="detail"><td colspan="${COLS.length}">${decision(a)}<dl>
+      <dt>Account ID</dt><dd>${esc(a.accountId)}</dd>
+      <dt>Form language</dt><dd>${esc(a.language)}</dd>
+      <dt>Friend group</dt><dd>${esc(a.friendDetails || "None given")}</dd>
+      <dt>Would transfer alone</dt><dd>${esc(a.withoutFriends || "Not answered")}</dd>
+      <dt>Savings and plan</dt><dd>${esc(a.savedPlan || "None given")}</dd></dl></td></tr>` : "";
+    return main + det;
+  }).join("") : `<tr><td colspan="${COLS.length}" class="empty">${apps.length ? "No applicants match this search." : "No applications yet. They appear here as players submit the form."}</td></tr>`;
+}
+
+function show(rows) {
+  apps = normalize(rows);
+  $("gate").hidden = true; $("dash").hidden = false;
+  $("updated").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  renderSummary(); renderTable();
+}
+
+let password = "";
+async function load() {
+  const r = await fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ action: "list", password }) });
+  if (!r.ok) throw new Error("network");
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error === "password" ? "password" : "server");
+  return j.rows || [];
+}
+async function open(fromGate) {
+  const msg = $("gateMsg"); msg.hidden = true;
+  $("unlock").disabled = $("refresh").disabled = true;
+  try {
+    show(await load());
+    try { sessionStorage.setItem("s1588-pw", password); } catch (e) {}
+    $("refresh").hidden = $("lock").hidden = false;
+  } catch (err) {
+    $("dash").hidden = true; $("gate").hidden = false; $("refresh").hidden = $("lock").hidden = true;
+    msg.hidden = false;
+    msg.textContent = err.message === "password" ? "That password is not correct."
+      : "Could not load applications. Check your connection and that the storage link is deployed, then try again.";
+    try { sessionStorage.removeItem("s1588-pw"); } catch (e) {}
+  } finally { $("unlock").disabled = $("refresh").disabled = false; }
+}
+
+$("gate").addEventListener("submit", ev => { ev.preventDefault(); password = $("pw").value; if (password) open(true); });
+$("refresh").addEventListener("click", () => open(false));
+$("lock").addEventListener("click", () => {
+  password = ""; apps = []; $("pw").value = "";
+  try { sessionStorage.removeItem("s1588-pw"); } catch (e) {}
+  $("dash").hidden = true; $("gate").hidden = false; $("refresh").hidden = $("lock").hidden = true; $("updated").textContent = "";
+});
+$("q").addEventListener("input", renderTable);
+$("seatFilter").addEventListener("change", renderTable);
+$("statusFilter").addEventListener("change", renderTable);
+$("rows").addEventListener("click", async ev => {
+  const b = ev.target.closest("button[data-act]"); if (!b) return;
+  const a = apps.find(x => x._id === Number(b.dataset.id)); if (!a) return;
+  const accept = b.dataset.act === "accept";
+  const inp = $("acceptInto");
+  const alliance = accept && inp ? inp.value.trim() : "";
+  if (accept && !alliance) { decisionMsg = "Choose the alliance this player is accepted into."; renderTable(); return; }
+  b.disabled = true; decisionMsg = "";
+  const status = accept ? "Accepted" : b.dataset.act === "reject" ? "Rejected" : "Pending";
+  try {
+    if (ENDPOINT) {
+      const r = await fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ action: "setStatus", password, row: a.row, accountId: a.accountId, status, acceptedAlliance: alliance }) });
+      if (!r.ok) throw new Error("network");
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || "server");
+    }
+    a.status = status; a.acceptedAlliance = alliance; a.decidedAt = status === "Pending" ? "" : new Date().toISOString();
+  } catch (err) {
+    decisionMsg = err.message === "moved" ? "The sheet changed since this page loaded. Press Refresh, then try again."
+      : err.message === "password" ? "The password is no longer correct. Lock the dashboard and sign in again."
+      : "The change was not saved. Check your connection and try again.";
+  }
+  renderSummary(); renderTable();
+});
+$("head").addEventListener("click", ev => {
+  const b = ev.target.closest("button[data-k]"); if (!b) return;
+  if (sortKey === b.dataset.k) sortDir = -sortDir; else { sortKey = b.dataset.k; sortDir = COLS.find(c => c.k === sortKey).num ? -1 : 1; }
+  renderTable();
+});
+function toggleRow(ev) {
+  const tr = ev.target.closest("tr.app"); if (!tr) return;
+  if (ev.type === "keydown" && ev.key !== "Enter" && ev.key !== " ") return;
+  if (ev.type === "keydown") ev.preventDefault();
+  decisionMsg = "";
+  const id = Number(tr.dataset.id); openId = openId === id ? null : id; renderTable();
+}
+$("rows").addEventListener("click", toggleRow);
+$("rows").addEventListener("keydown", toggleRow);
+
+(function init() {
+  if (!ENDPOINT) {
+    $("demoNote").hidden = false;
+    show(EXAMPLES.map(r => Object.fromEntries(KEYS.map((k, i) => [k, r[i]]))));
+    return;
+  }
+  try { password = sessionStorage.getItem("s1588-pw") || ""; } catch (e) {}
+  if (password) open(false); else $("gate").hidden = false;
+})();
+})();
+</script>
+</body>
+</html>
